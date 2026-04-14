@@ -92,7 +92,7 @@ export default function Page() {
                   <span className="text-sm font-semibold text-foreground">$49</span>
                 </div>
               </div>
-              <div className="absolute -bottom-6 -right-6 h-24 w-24 rounded-full bg-primary/20 blur-2xl" />
+              
             </div>
           </div>
         </Container>
@@ -182,7 +182,7 @@ export default function Page() {
                     <GraduationCap className="h-12 w-12 text-primary" />
                   </div>
                 </div>
-                <div className="absolute -bottom-6 left-6 h-24 w-24 rounded-full bg-primary/20 blur-2xl" />
+                
               </div>
             </div>
           </div>
