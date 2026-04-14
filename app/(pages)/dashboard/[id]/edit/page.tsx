@@ -65,7 +65,7 @@ export default async function EditCoursePage({
               if (!title) throw new Error("Title required");
 
               // Call updateCourse from actions.ts
-              await updateCourse(id, user.id, { title, description, price });
+              await updateCourse(id, { title, description, price });
             }}
             className="space-y-5"
           >

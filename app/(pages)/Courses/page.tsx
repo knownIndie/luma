@@ -64,7 +64,7 @@ export default async function CoursesPage({
             Discover courses from our expert instructors.
           </p>
         </div>
-        <div className="flex w-full sm:w-auto gap-3">
+        {/* <div className="flex w-full sm:w-auto gap-3">
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -75,7 +75,7 @@ export default async function CoursesPage({
           <Button variant="outline" size="sm">
             Filters
           </Button>
-        </div>
+        </div> */}
       </div>
 
       {courses.length === 0 ? (

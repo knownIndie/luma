@@ -7,7 +7,11 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "eslint",
-    "flush": "rm -rf .next node_modules/.prisma && pnpm prisma generate"
+    "flush": "rm -rf .next node_modules/.prisma && pnpm prisma generate",
+    "db:seed": "node --env-file=.env prisma/seed.js"
+  },
+  "prisma": {
+    "seed": "node --env-file=.env prisma/seed.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.0.0",

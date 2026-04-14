@@ -77,6 +77,9 @@ model Course {
   enrollments     Enrollment[]
   stripeProductId String?
   stripePriceId   String?
+
+  @@index([createdAt])
+  @@index([instructorId, createdAt])
 }
 
 // Chapter: a section of a course that contains lessons.
@@ -90,6 +93,8 @@ model Chapter {
   lessons   Lesson[] // Lessons within this Chapter (one-to-many)
   createdAt DateTime @default(now()) // When the chapter was created
   updatedAt DateTime @updatedAt // When the chapter was last updated
+
+  @@index([courseId, order])
 }
 
 // Lesson: the smallest content unit, part of a chapter.
@@ -104,6 +109,8 @@ model Lesson {
   // Every Lesson belongs to one Chapter (many lessons per chapter). If the Chapter is deleted, delete its Lessons (cascade).
   createdAt      DateTime @default(now()) // When the lesson was created
   updatedAt      DateTime @updatedAt // When the lesson was last updated
+
+  @@index([chapterId, order])
 }
 
 // Relations summary:
@@ -121,4 +128,13 @@ model Enrollment {
   createdAt DateTime @default(now())
 
   @@unique([userId, courseId]) // means when we do a db call for this we need to do userId_CourseId: and stuff as this is a  composite unique constraint 
+  @@index([userId])
+  @@index([courseId])
+}
+
+model StripeWebhookEvent {
+  id          String   @id @default(uuid())
+  eventId     String   @unique
+  type        String
+  processedAt DateTime @default(now())
 }

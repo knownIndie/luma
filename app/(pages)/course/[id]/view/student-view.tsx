@@ -3,21 +3,28 @@
 import { memo, useCallback, useMemo, useState } from "react"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import { extractYouTubeId } from "@/lib/youtube"
-import { Prisma } from "@prisma/client"
 
-type CourseWithChaptersAndLessons = Prisma.CourseGetPayload<{
-  include: {
-    chapters: {
-      include: {
-        lessons: true
-      }
-    }
-  }
-}>
+type SerializedLesson = {
+  id: string
+  title: string
+  description: string | null
+  youtubeVideoId: string | null
+  order: number
+}
 
-// Serialized version with price as string instead of Decimal
-type SerializedCourse = Omit<CourseWithChaptersAndLessons, 'price'> & {
+type SerializedChapter = {
+  id: string
+  title: string
+  order: number
+  lessons: SerializedLesson[]
+}
+
+type SerializedCourse = {
+  id: string
+  title: string
+  instructorId: string
   price: string
+  chapters: SerializedChapter[]
 }
 
 type Chapter = SerializedCourse["chapters"][number]

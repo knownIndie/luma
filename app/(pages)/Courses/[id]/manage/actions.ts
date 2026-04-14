@@ -1,30 +1,40 @@
 "use server";
+
 import prisma from "@/lib/db/prisma";
+import { requireCurrentUser } from "@/lib/auth";
 import { revalidateTag } from "next/cache";
 
-// ===== COURSE ACTIONS =====
+async function requireInstructorId() {
+  const user = await requireCurrentUser();
+
+  if ((user.publicMetadata.role as string | undefined) !== "INSTRUCTOR") {
+    throw new Error("Unauthorized");
+  }
+
+  return user.id;
+}
+
 export async function updateCourse(
   courseId: string,
-  userId: string,
   data: { title: string; description: string | null; price: number }
 ) {
-  console.log("=== updateCourse called ===");
+  const userId = await requireInstructorId();
   const course = await prisma.course.findUnique({
     where: { id: courseId },
   });
 
-
   if (!course || course.instructorId !== userId) {
-    console.log("Authorization FAILED");
     throw new Error("Unauthorized");
   }
 
-  if (!data.title?.trim()) throw new Error("Title required");
+  if (!data.title?.trim()) {
+    throw new Error("Title required");
+  }
+
   if (data.price < 0 || data.price > 1000000) {
     throw new Error("Price must be between 0 and 1,000,000");
   }
 
-  console.log("About to update course...");
   await prisma.course.update({
     where: { id: courseId },
     data: {
@@ -36,34 +46,26 @@ export async function updateCourse(
 
   revalidateTag("course:list", "max");
   revalidateTag(`course:${courseId}`, "max");
-  console.log("Course updated successfully");
 }
 
-// ===== CHAPTER ACTIONS =====
-
-export async function createChapter(
-  courseId: string,
-  userId: string,
-  title: string
-) {
-  // Find course by ID
+export async function createChapter(courseId: string, title: string) {
+  const userId = await requireInstructorId();
   const course = await prisma.course.findUnique({
     where: { id: courseId },
   });
 
-  // Check ownership
   if (!course || course.instructorId !== userId) {
     throw new Error("Unauthorized");
   }
-  // Validate title
-  if (!title?.trim()) throw new Error("Chapter title required");
 
-  // Count current chapters to set order index
+  if (!title?.trim()) {
+    throw new Error("Chapter title required");
+  }
+
   const chapterCount = await prisma.chapter.count({
     where: { courseId },
   });
 
-  // Create new chapter
   const chapter = await prisma.chapter.create({
     data: {
       title: title.trim(),
@@ -76,25 +78,21 @@ export async function createChapter(
   return chapter;
 }
 
-export async function updateChapter(
-  chapterId: string,
-  userId: string,
-  title: string
-) {
-  // Find chapter and course
+export async function updateChapter(chapterId: string, title: string) {
+  const userId = await requireInstructorId();
   const chapter = await prisma.chapter.findUnique({
     where: { id: chapterId },
     include: { course: true },
   });
 
-  // Check ownership
   if (!chapter || chapter.course.instructorId !== userId) {
     throw new Error("Unauthorized");
   }
-  // Validate title
-  if (!title?.trim()) throw new Error("Chapter title required");
 
-  // Update chapter title
+  if (!title?.trim()) {
+    throw new Error("Chapter title required");
+  }
+
   const updated = await prisma.chapter.update({
     where: { id: chapterId },
     data: { title: title.trim() },
@@ -104,19 +102,17 @@ export async function updateChapter(
   return updated;
 }
 
-export async function deleteChapter(chapterId: string, userId: string) {
-  // Find chapter and course
+export async function deleteChapter(chapterId: string) {
+  const userId = await requireInstructorId();
   const chapter = await prisma.chapter.findUnique({
     where: { id: chapterId },
     include: { course: true },
   });
 
-  // Check ownership
   if (!chapter || chapter.course.instructorId !== userId) {
     throw new Error("Unauthorized");
   }
 
-  // Delete chapter
   const deleted = await prisma.chapter.delete({
     where: { id: chapterId },
   });
@@ -125,37 +121,36 @@ export async function deleteChapter(chapterId: string, userId: string) {
   return deleted;
 }
 
-// ===== LESSON ACTIONS =====
-
 export async function createLesson(
   chapterId: string,
-  userId: string,
   data: {
     title: string;
     youtubeVideoId: string;
     description: string | null;
   }
 ) {
-  // Find chapter and course
+  const userId = await requireInstructorId();
   const chapter = await prisma.chapter.findUnique({
     where: { id: chapterId },
     include: { course: true },
   });
 
-  // Check ownership
   if (!chapter || chapter.course.instructorId !== userId) {
     throw new Error("Unauthorized");
   }
-  // Validate title and YouTube video ID
-  if (!data.title?.trim()) throw new Error("Lesson title required");
-  if (!data.youtubeVideoId?.trim()) throw new Error("YouTube ID required");
 
-  // Count current lessons to set order index
+  if (!data.title?.trim()) {
+    throw new Error("Lesson title required");
+  }
+
+  if (!data.youtubeVideoId?.trim()) {
+    throw new Error("YouTube ID required");
+  }
+
   const lessonCount = await prisma.lesson.count({
     where: { chapterId },
   });
 
-  // Create new lesson
   const lesson = await prisma.lesson.create({
     data: {
       title: data.title.trim(),
@@ -172,28 +167,30 @@ export async function createLesson(
 
 export async function updateLesson(
   lessonId: string,
-  userId: string,
   data: {
     title: string;
     youtubeVideoId: string;
     description: string | null;
   }
 ) {
-  // Find lesson, chapter, and course
+  const userId = await requireInstructorId();
   const lesson = await prisma.lesson.findUnique({
     where: { id: lessonId },
     include: { chapter: { include: { course: true } } },
   });
 
-  // Check ownership
   if (!lesson || lesson.chapter.course.instructorId !== userId) {
     throw new Error("Unauthorized");
   }
-  // Validate title and YouTube video ID
-  if (!data.title?.trim()) throw new Error("Lesson title required");
-  if (!data.youtubeVideoId?.trim()) throw new Error("YouTube ID required");
 
-  // Update lesson info
+  if (!data.title?.trim()) {
+    throw new Error("Lesson title required");
+  }
+
+  if (!data.youtubeVideoId?.trim()) {
+    throw new Error("YouTube ID required");
+  }
+
   const updated = await prisma.lesson.update({
     where: { id: lessonId },
     data: {
@@ -207,19 +204,17 @@ export async function updateLesson(
   return updated;
 }
 
-export async function deleteLesson(lessonId: string, userId: string) {
-  // Find lesson, chapter, and course
+export async function deleteLesson(lessonId: string) {
+  const userId = await requireInstructorId();
   const lesson = await prisma.lesson.findUnique({
     where: { id: lessonId },
     include: { chapter: { include: { course: true } } },
   });
 
-  // Check ownership
   if (!lesson || lesson.chapter.course.instructorId !== userId) {
     throw new Error("Unauthorized");
   }
 
-  // Delete lesson
   const deleted = await prisma.lesson.delete({
     where: { id: lessonId },
   });

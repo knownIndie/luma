@@ -54,10 +54,8 @@ interface CourseData {
 // Lets instructors manage a course: edit course info, chapters, and lessons
 export function ManageChaptersClient({
   course: initialCourse, // from parent/server, this is our starting course data (props)
-  userId,                // so we know who is editing, for permissions/actions
 }: {
   course: CourseData;
-  userId: string;
 }) {
   const router = useRouter(); // Next router (for client-side navigation and refreshes)
   // useTransition is for handling UI during async actions (like "Saving...", disabling buttons, etc.)
@@ -102,7 +100,7 @@ export function ManageChaptersClient({
     e.preventDefault();
     startTransition(async () => {
       try {
-        await updateCourse(course.id, userId, {
+        await updateCourse(course.id, {
           title: course.title,
           description: course.description,
           price: parseFloat(course.price),
@@ -123,7 +121,7 @@ export function ManageChaptersClient({
     }
     startTransition(async () => {
       try {
-        const created = await createChapter(course.id, userId, newChapterTitle);
+        const created = await createChapter(course.id, newChapterTitle);
         toast.success("Chapter added!");
         setCourse((prev) => ({
           ...prev,
@@ -149,7 +147,7 @@ export function ManageChaptersClient({
     if (!confirm("Delete this chapter and all lessons?")) return;
     startTransition(async () => {
       try {
-        await deleteChapter(chapterId, userId);
+        await deleteChapter(chapterId);
         toast.success("Chapter deleted");
         setCourse((prev) => ({
           ...prev,
@@ -174,7 +172,7 @@ export function ManageChaptersClient({
     }
     startTransition(async () => {
       try {
-        const created = await createLesson(chapterId, userId, {
+        const created = await createLesson(chapterId, {
           title: newLesson.title,
           youtubeVideoId: newLesson.youtubeVideoId,
           description: newLesson.description || null,
@@ -200,7 +198,7 @@ export function ManageChaptersClient({
     if (!confirm("Delete this lesson?")) return;
     startTransition(async () => {
       try {
-        await deleteLesson(lessonId, userId);
+        await deleteLesson(lessonId);
         toast.success("Lesson deleted");
         setCourse((prev) => ({
           ...prev,
@@ -333,7 +331,7 @@ export function ManageChaptersClient({
                             // Edits use server action and on success, page refreshes
                             startTransition(async () => {
                               try {
-                                const updated = await updateChapter(chapter.id, userId, newTitle);
+                                const updated = await updateChapter(chapter.id, newTitle);
                                 setCourse((prev) => ({
                                   ...prev,
                                   chapters: prev.chapters.map((ch) =>
@@ -401,7 +399,7 @@ export function ManageChaptersClient({
                                     if (newTitle) {
                                       startTransition(async () => {
                                         try {
-                                          const updated = await updateLesson(lesson.id, userId, {
+                                          const updated = await updateLesson(lesson.id, {
                                             title: newTitle,
                                             youtubeVideoId: lesson.youtubeVideoId || "",
                                             description: lesson.description,

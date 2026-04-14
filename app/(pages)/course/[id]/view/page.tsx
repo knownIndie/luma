@@ -2,16 +2,12 @@ import prisma from "@/lib/db/prisma"
 import { currentUser } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 import { StudentView } from "@/app/(pages)/course/[id]/view/student-view"
+import { getCourseContent } from "@/lib/course-queries"
 
 export default async function viewcourse({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const user = await currentUser()
+  const [user, courseData] = await Promise.all([currentUser(), getCourseContent(id)])
   if (!user) redirect("/sign-in")
-
-  const courseData = await prisma.course.findUnique({
-    where: { id: id },
-    include: { chapters: { include: { lessons: true } } }
-  })
 
   if (!courseData) redirect("/Courses")
 

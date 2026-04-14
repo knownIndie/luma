@@ -12,22 +12,20 @@ import { BookOpen } from "lucide-react";
 // Card component for displaying a single course with manage/delete options
 export function CourseCard({
   course,
-  userId,
+  canManage,
 }: {
   course: SerializedCourse;
-  userId: string;
+  canManage: boolean;
 }) {
   // useTransition for handling async deletion and loading UI
   const [isPending, startTransition] = useTransition();
-
-  const isOwner = userId === course.instructorId;
 
   // Confirm and delete course if user agrees
   const handleDelete = () => {
     if (confirm(`Delete "${course.title}"? This cannot be undone.`)) {
       startTransition(async () => {
         try {
-          await deleteCourse(course.id, userId);
+          await deleteCourse(course.id);
           toast.success(`"${course.title}" has been deleted`);
         } catch (error) {
           toast.error("Failed to delete course");
@@ -76,14 +74,14 @@ export function CourseCard({
           </Link>
 
           {/* Manage course page - only for owner */}
-          {isOwner && (
+          {canManage && (
             <Link href={`/Courses/${course.id}/manage`} className="flex-1 sm:flex-none">
               <Button variant="outline" className="w-full sm:w-auto">Manage</Button>
             </Link>
           )}
 
           {/* Delete course button - only for owner */}
-          {isOwner && (
+          {canManage && (
             <Button
               variant="destructive"
               onClick={handleDelete}

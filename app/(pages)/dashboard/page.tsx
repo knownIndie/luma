@@ -5,7 +5,6 @@ import { CourseCard } from "./course-card";
 import { currentUser } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { serializeCourses } from "@/lib/serialize";
 import { EmptyState } from "@/components/empty-state";
 import { BookOpen, GraduationCap, Plus } from "lucide-react";
 
@@ -25,8 +24,10 @@ export default async function DashboardPage() {
       orderBy: { createdAt: "desc" },
     });
 
-    // Serialize courses to convert Decimal price to string
-    const plainCourses = serializeCourses(courses);
+    const plainCourses = courses.map((course) => ({
+      ...course,
+      price: course.price.toString(),
+    }));
 
     return (
       <Container className="py-10 sm:py-12">
@@ -62,7 +63,7 @@ export default async function DashboardPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {plainCourses.map((course) => (
-              <CourseCard key={course.id} course={course} userId={user.id} />
+              <CourseCard key={course.id} course={course} canManage={true} />
             ))}
           </div>
         )}
@@ -73,7 +74,7 @@ export default async function DashboardPage() {
   // Student view
   const userEnrolledCourses = await prisma.enrollment.findMany({
     where: { userId: user.id },
-    include: {
+    select: {
       course: true,
     },
   });
@@ -117,7 +118,7 @@ export default async function DashboardPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {plainCourses.map((course) => (
-            <CourseCard key={course.id} course={course} userId={user.id} />
+            <CourseCard key={course.id} course={course} canManage={false} />
           ))}
         </div>
       )}

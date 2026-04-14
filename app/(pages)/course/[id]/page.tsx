@@ -6,30 +6,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckoutButton } from "./checkout-button";
-import { unstable_cache } from "next/cache";
-
-const getCoursePublic = (id: string) =>
-  unstable_cache(
-    async () =>
-      prisma.course.findUnique({
-        where: { id },
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          price: true,
-          instructorId: true,
-          instructor: {
-            select: {
-              name: true,
-              email: true,
-            },
-          },
-        },
-      }),
-    ["course", id],
-    { tags: [`course:${id}`], revalidate: 300 }
-  )();
+import { getCoursePublic } from "@/lib/course-queries";
 
 export default async function CoursePage({
 	params,
@@ -38,10 +15,9 @@ export default async function CoursePage({
 }) {
 	const { id } = await params; // ← AWAIT params
 
-	const course = await getCoursePublic(id);
+	const [course, user] = await Promise.all([getCoursePublic(id), currentUser()]);
 
 	if (!course) notFound();
-	const user = await currentUser();
 	const isOwner = user?.id === course.instructorId;
 
 	let isEnrolled = false;

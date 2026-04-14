@@ -62,7 +62,7 @@ export default async function ManageCoursePage({
             Structure chapters and lessons with precision.
           </p>
         </div>
-        <ManageChaptersClient course={courseData} userId={user.id} />
+        <ManageChaptersClient course={courseData} />
       </div>
     </Container>
   );

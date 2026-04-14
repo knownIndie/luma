@@ -1,27 +1,64 @@
+import { Prisma } from "@prisma/client";
 import prisma from "@/lib/db/prisma";
+import { stripe } from "@/lib/stripe";
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+function getWebhookSecret() {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!secret) {
+    throw new Error("STRIPE_WEBHOOK_SECRET is not set");
+  }
+
+  return secret;
+}
 
 export async function POST(req: Request) {
+  const signature = req.headers.get("stripe-signature");
+
+  if (!signature) {
+    return new Response("Missing stripe-signature header", { status: 400 });
+  }
+
+  const payload = await req.text();
+
+  let event;
+
   try {
-    const body = await req.json();
+    event = stripe().webhooks.constructEvent(
+      payload,
+      signature,
+      getWebhookSecret()
+    );
+  } catch (error) {
+    console.error("Invalid Stripe webhook signature", error);
+    return new Response("Invalid signature", { status: 400 });
+  }
 
-    console.log("Webhook received:", body.type);
+  if (event.type !== "checkout.session.completed") {
+    return new Response("Ignored", { status: 200 });
+  }
 
-    if (body.type === "checkout.session.completed") {
-      const metadata = body.data.object.metadata;
-      const userId = metadata?.userId;
-      const courseId = metadata?.courseId;
+  const session = event.data.object;
+  const userId = session.metadata?.userId;
+  const courseId = session.metadata?.courseId;
 
-      console.log("Metadata:", { userId, courseId });
+  if (!userId || !courseId) {
+    return new Response("Missing metadata", { status: 400 });
+  }
 
-      if (!userId || !courseId) {
-        throw new Error("Missing userId or courseId");
-      }
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.stripeWebhookEvent.create({
+        data: {
+          eventId: event.id,
+          type: event.type,
+        },
+      });
 
-      // Ensure user exists
-      await prisma.user.upsert({
+      await tx.user.upsert({
         where: { clerkId: userId },
         update: {},
         create: {
@@ -32,16 +69,31 @@ export async function POST(req: Request) {
         },
       });
 
-      await prisma.enrollment.create({
-        data: { userId, courseId },
+      await tx.enrollment.upsert({
+        where: {
+          userId_courseId: {
+            userId,
+            courseId,
+          },
+        },
+        update: {},
+        create: {
+          userId,
+          courseId,
+        },
       });
-
-      console.log(`✅ Enrollment created: ${userId} → ${courseId}`);
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return new Response("Already processed", { status: 200 });
     }
 
-    return new Response("OK", { status: 200 });
-  } catch (error) {
-    console.error("Webhook error:", error);
+    console.error("Webhook processing error", error);
     return new Response("Internal error", { status: 500 });
   }
+
+  return new Response("OK", { status: 200 });
 }
